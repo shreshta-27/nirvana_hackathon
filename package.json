@@ -1,0 +1,22 @@
+{
+  "name": "nirvana_hackathon",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shreshta-27/nirvana_hackathon.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shreshta-27/nirvana_hackathon/issues"
+  },
+  "homepage": "https://github.com/shreshta-27/nirvana_hackathon#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

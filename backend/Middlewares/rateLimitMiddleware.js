@@ -79,3 +79,17 @@ export const createCustomLimiter = (windowMs, max, message) => {
         legacyHeaders: false
     });
 };
+
+export const applyRateLimit = (type) => {
+    const limiters = {
+        strictAuth: strictAuthLimiter,
+        auth: authLimiter,
+        general: generalLimiter,
+        ai: aiLimiter,
+        chart: chartLimiter,
+        upload: uploadLimiter,
+        emailOtp: authLimiter
+    };
+
+    return limiters[type] || generalLimiter;
+};

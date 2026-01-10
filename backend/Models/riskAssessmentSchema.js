@@ -54,7 +54,7 @@ const riskAssessmentSchema = new mongoose.Schema({
     },
     aiModel: {
         type: String,
-        default: 'gemini-1.5-flash'
+        default: 'gemini-2.5-flash'
     },
     confidence: {
         type: Number,

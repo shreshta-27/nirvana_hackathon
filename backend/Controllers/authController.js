@@ -1,11 +1,8 @@
 import otpGenerator from 'otp-generator';
 import jwt from 'jsonwebtoken';
-import twilio from 'twilio';
 import User from '../Models/userSchema.js';
 import OTP from '../Models/otpSchema.js';
 import { sendOTPEmail } from '../Config/emailService.js';
-
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const generateToken = (userId, role) => {
     return jwt.sign(
@@ -51,15 +48,10 @@ export const sendPhoneOTP = async (req, res) => {
             type: 'phone'
         });
 
-        try {
-            await twilioClient.messages.create({
-                body: `Your Nirvana verification code is: ${otp}. Valid for ${expiryMinutes} minutes.`,
-                from: process.env.TWILIO_PHONE_NUMBER,
-                to: phoneNumber
-            });
-        } catch (twilioError) {
-            console.error('Twilio Error:', twilioError.message);
-        }
+        // Mock SMS Send (since Twilio is removed)
+        console.log(`\n=== 📱 MOCK SMS TO ${phoneNumber} ===`);
+        console.log(`Your Nirvana verification code is: ${otp}`);
+        console.log(`====================================\n`);
 
         res.json({
             success: true,

@@ -2,6 +2,7 @@ import Patient from '../Models/patientSchema.js';
 import Visit from '../Models/visitSchema.js';
 import RiskAssessment from '../Models/riskAssessmentSchema.js';
 import QRCode from 'qrcode';
+import { clearCache } from '../Middlewares/cacheMiddleware.js';
 
 export const registerPatient = async (req, res) => {
     try {
@@ -38,6 +39,10 @@ export const registerPatient = async (req, res) => {
         const qrCode = await QRCode.toDataURL(qrData);
         patient.qrCode = qrCode;
         await patient.save();
+
+        clearCache('/api/patients');
+        clearCache('/api/doctor');
+        clearCache('/api/charts');
 
         res.status(201).json({
             success: true,
@@ -194,6 +199,10 @@ export const updatePatient = async (req, res) => {
         if (chronicConditions) patient.chronicConditions = chronicConditions;
 
         await patient.save();
+
+        clearCache('/api/patients');
+        clearCache('/api/doctor');
+        clearCache('/api/charts');
 
         res.json({
             success: true,

@@ -297,3 +297,139 @@ export const getDashboardStats = async (req, res) => {
         });
     }
 };
+
+export const getDiseaseStats = async (req, res) => {
+    try {
+        // Get chronic conditions statistics from patients
+        const chronicConditionsStats = await Patient.aggregate([
+            { $match: { isActive: true, chronicConditions: { $exists: true, $ne: [] } } },
+            { $unwind: '$chronicConditions' },
+            {
+                $group: {
+                    _id: '$chronicConditions',
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } }
+        ]);
+
+        // Get symptoms statistics from recent visits
+        const symptomStats = await Visit.aggregate([
+            {
+                $facet: {
+                    pregnantSymptoms: [
+                        { $match: { 'pregnantVisit.symptoms': { $exists: true, $ne: [] } } },
+                        { $unwind: '$pregnantVisit.symptoms' },
+                        {
+                            $group: {
+                                _id: '$pregnantVisit.symptoms',
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    childSymptoms: [
+                        { $match: { 'childVisit.symptoms': { $exists: true, $ne: [] } } },
+                        { $unwind: '$childVisit.symptoms' },
+                        {
+                            $group: {
+                                _id: '$childVisit.symptoms',
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    adultSymptoms: [
+                        { $match: { 'adultVisit.symptoms': { $exists: true, $ne: [] } } },
+                        { $unwind: '$adultVisit.symptoms' },
+                        {
+                            $group: {
+                                _id: '$adultVisit.symptoms',
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]);
+
+        // Combine all symptoms
+        const allSymptoms = [
+            ...(symptomStats[0]?.pregnantSymptoms || []),
+            ...(symptomStats[0]?.childSymptoms || []),
+            ...(symptomStats[0]?.adultSymptoms || [])
+        ];
+
+        // Merge duplicate symptoms
+        const symptomsMap = {};
+        allSymptoms.forEach(symptom => {
+            if (symptomsMap[symptom._id]) {
+                symptomsMap[symptom._id] += symptom.count;
+            } else {
+                symptomsMap[symptom._id] = symptom.count;
+            }
+        });
+
+        const combinedSymptoms = Object.entries(symptomsMap)
+            .map(([symptom, count]) => ({ _id: symptom, count }))
+            .sort((a, b) => b.count - a.count);
+
+        // Format data for Chart.js
+        const chartData = {
+            chronicConditions: {
+                labels: chronicConditionsStats.map(item => item._id || 'Unknown'),
+                data: chronicConditionsStats.map(item => item.count),
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF',
+                    '#FF9F40',
+                    '#FF6384',
+                    '#C9CBCF'
+                ]
+            },
+            symptoms: {
+                labels: combinedSymptoms.map(item => item._id || 'Unknown'),
+                data: combinedSymptoms.map(item => item.count),
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF',
+                    '#FF9F40',
+                    '#FF6384',
+                    '#C9CBCF',
+                    '#E7E9ED',
+                    '#8E44AD'
+                ]
+            },
+            categoryDistribution: {
+                labels: ['Pregnant', 'Child', 'Adult'],
+                data: await Promise.all([
+                    Patient.countDocuments({ category: 'pregnant', isActive: true }),
+                    Patient.countDocuments({ category: 'child', isActive: true }),
+                    Patient.countDocuments({ category: 'adult', isActive: true })
+                ]),
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+            }
+        };
+
+        res.json({
+            success: true,
+            chartData,
+            rawData: {
+                chronicConditions: chronicConditionsStats,
+                symptoms: combinedSymptoms
+            }
+        });
+
+    } catch (error) {
+        console.error('Get Disease Stats Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch disease statistics',
+            details: error.message
+        });
+    }
+};

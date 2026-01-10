@@ -205,8 +205,26 @@ export const addVisit = async (req, res) => {
             requiresDoctorReview: riskAnalysis.requiresDoctorReview || false
         });
 
+        if (adultVisit?.bp || pregnantVisit?.bp) {
+            const bp = adultVisit?.bp || pregnantVisit?.bp;
+            if (bp.systolic && bp.diastolic) {
+                if (!patient.medicalHistory) patient.medicalHistory = {};
+                if (!patient.medicalHistory.latestVitals) patient.medicalHistory.latestVitals = {};
+                patient.medicalHistory.latestVitals.bp = bp;
+            }
+        }
+
+        if (adultVisit?.sugar) {
+            if (adultVisit.sugar.value) {
+                if (!patient.medicalHistory) patient.medicalHistory = {};
+                if (!patient.medicalHistory.latestVitals) patient.medicalHistory.latestVitals = {};
+                patient.medicalHistory.latestVitals.sugarLevel = adultVisit.sugar;
+            }
+        }
+
         patient.currentRiskLevel = riskAnalysis.riskLevel;
         patient.lastRiskUpdate = new Date();
+        patient.markModified('medicalHistory');
         await patient.save();
 
         res.status(201).json({

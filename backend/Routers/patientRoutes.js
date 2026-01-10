@@ -10,10 +10,10 @@ import { authenticate, authorize } from '../Middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/register', authenticate, authorize('frontline_worker', 'doctor'), registerPatient);
+router.post('/register', authenticate, authorize('worker', 'doctor'), registerPatient);
 router.get('/', authenticate, getAllPatients);
 router.get('/:id', authenticate, getPatientById);
-router.put('/:id', authenticate, authorize('frontline_worker', 'doctor'), updatePatient);
+router.put('/:id', authenticate, authorize('worker', 'doctor'), updatePatient);
 router.get('/:id/health-card', authenticate, getHealthCard);
 
 export default router;

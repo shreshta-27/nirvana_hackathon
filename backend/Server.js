@@ -12,8 +12,10 @@ import emailOtpRoutes from './Routers/emailOtpRoutes.js';
 import patientRoutes from './Routers/patientRoutes.js';
 import visitRoutes from './Routers/visitRoutes.js';
 import doctorRoutes from './Routers/doctorRoutes.js';
+import workerRoutes from './Routers/workerRoutes.js';
 import alertRoutes from './Routers/alertRoutes.js';
 import chartRoutes from './Routers/chartRoutes.js';
+import publicRoutes from './Routers/publicRoutes.js';
 
 import { errorHandler, notFound } from './Middlewares/errorMiddleware.js';
 import {
@@ -82,6 +84,7 @@ app.get('/', (req, res) => {
             patients: '/api/patients',
             visits: '/api/visits',
             doctor: '/api/doctor',
+            worker: '/api/worker',
             alerts: '/api/alerts',
             charts: '/api/charts'
         }
@@ -104,6 +107,8 @@ app.use('/api/email-otp', authLimiter, emailOtpRoutes);
 app.use('/api/patients', generalLimiter, patientRoutes);
 app.use('/api/visits', aiLimiter, visitRoutes);
 app.use('/api/doctor', generalLimiter, doctorRoutes);
+app.use('/api/worker', generalLimiter, workerRoutes);
+app.use('/api/public', generalLimiter, publicRoutes);
 app.use('/api/alerts', generalLimiter, alertRoutes);
 app.use('/api/charts', chartLimiter, chartRoutes);
 

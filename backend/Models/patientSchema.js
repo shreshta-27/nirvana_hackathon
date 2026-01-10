@@ -53,13 +53,58 @@ const patientSchema = new mongoose.Schema({
         birthWeight: Number
     },
     chronicConditions: [{
-        type: String
+        type: String,
+        enum: [
+            'Diabetes',
+            'Hypertension',
+            'Thyroid',
+            'Asthma',
+            'Arthritis',
+            'Cardiovascular Disease',
+            'Kidney Disease',
+            'Tuberculosis',
+            'Anemia',
+            'PCOS',
+            'Epilepsy',
+            'Cancer',
+            'Other'
+        ]
     }],
+    medicalHistory: {
+        hypertension: {
+            type: Boolean,
+            default: false
+        },
+        diabetes: {
+            type: Boolean,
+            default: false
+        },
+        thyroid: {
+            type: String,
+            enum: ['hypo', 'hyper', 'normal', 'none'],
+            default: 'none'
+        },
+        latestVitals: {
+            bp: {
+                systolic: Number,
+                diastolic: Number
+            },
+            sugarLevel: {
+                value: String,
+                type: { type: String, enum: ['fasting', 'random', 'pp'] }
+            }
+        }
+    },
     currentRiskLevel: {
         type: String,
         enum: ['normal', 'monitor', 'high'],
         default: 'normal',
         index: true
+    },
+    missedCare: {
+        status: { type: Boolean, default: false },
+        type: { type: String, enum: ['ANC', 'Vaccination', 'Medication', 'General', 'None'], default: 'None' },
+        missedSince: Date
     },
     lastRiskUpdate: {
         type: Date

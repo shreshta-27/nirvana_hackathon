@@ -1,12 +1,13 @@
 import Patient from '../Models/patientSchema.js';
 import Visit from '../Models/visitSchema.js';
 import RiskAssessment from '../Models/riskAssessmentSchema.js';
+import DoctorNotes from '../Models/doctorNotesSchema.js';
 import QRCode from 'qrcode';
 import { clearCache } from '../Middlewares/cacheMiddleware.js';
 
 export const registerPatient = async (req, res) => {
     try {
-        const { name, age, dob, gender, phoneNumber, village, category, pregnancyDetails, childDetails, chronicConditions } = req.body;
+        const { name, age, dob, gender, phoneNumber, village, category, pregnancyDetails, childDetails, chronicConditions, medicalHistory } = req.body;
 
         if (!name || !age || !gender || !village || !category) {
             return res.status(400).json({
@@ -26,6 +27,7 @@ export const registerPatient = async (req, res) => {
             pregnancyDetails,
             childDetails,
             chronicConditions,
+            medicalHistory,
             registeredBy: req.user.userId
         });
 
@@ -75,7 +77,7 @@ export const getAllPatients = async (req, res) => {
 
         let query = { isActive: true };
 
-        if (req.user.role === 'frontline_worker') {
+        if (req.user.role === 'worker') {
             query.registeredBy = req.user.userId;
         }
 
@@ -110,9 +112,27 @@ export const getAllPatients = async (req, res) => {
                     .select('visitDate')
                     .lean();
 
+                let missedCare = { status: false, type: 'None' };
+                const daysSinceVisit = lastVisit ? (new Date() - new Date(lastVisit.visitDate)) / (1000 * 60 * 60 * 24) : 999;
+
+                if (patient.category === 'pregnant' && daysSinceVisit > 30) {
+                    missedCare = { status: true, type: 'ANC' };
+                } else if (patient.category === 'child' && daysSinceVisit > 45) {
+                    missedCare = { status: true, type: 'Vaccination' };
+                } else if (patient.chronicConditions && patient.chronicConditions.length > 0 && daysSinceVisit > 30) {
+                    missedCare = { status: true, type: 'Medication' };
+                }
+
+                const latestNote = await DoctorNotes.findOne({ patientId: patient._id })
+                    .sort({ createdAt: -1 })
+                    .select('advice createdAt')
+                    .lean();
+
                 return {
                     ...patient,
-                    lastVisitDate: lastVisit?.visitDate || null
+                    lastVisitDate: lastVisit?.visitDate || null,
+                    missedCare,
+                    latestDoctorAdvice: latestNote?.advice || null
                 };
             })
         );
@@ -157,12 +177,22 @@ export const getPatientById = async (req, res) => {
             .sort({ createdAt: -1 })
             .lean();
 
+        const latestNote = await DoctorNotes.findOne({ patientId: patient._id })
+            .sort({ createdAt: -1 })
+            .lean();
+
         res.json({
             success: true,
             patient: {
                 ...patient,
                 recentVisits: visits,
-                latestRiskAssessment: latestRisk
+                latestRiskAssessment: latestRisk,
+                latestDoctorAdvice: latestNote ? {
+                    advice: latestNote.advice,
+                    notes: latestNote.notes,
+                    date: latestNote.createdAt,
+                    doctorName: latestNote.doctorId?.name
+                } : null
             }
         });
 
@@ -197,6 +227,16 @@ export const updatePatient = async (req, res) => {
         if (pregnancyDetails) patient.pregnancyDetails = { ...patient.pregnancyDetails, ...pregnancyDetails };
         if (childDetails) patient.childDetails = { ...patient.childDetails, ...childDetails };
         if (chronicConditions) patient.chronicConditions = chronicConditions;
+        if (medicalHistory) {
+            patient.medicalHistory = {
+                ...patient.medicalHistory,
+                ...medicalHistory,
+                latestVitals: {
+                    ...patient.medicalHistory?.latestVitals,
+                    ...medicalHistory.latestVitals
+                }
+            };
+        }
 
         await patient.save();
 

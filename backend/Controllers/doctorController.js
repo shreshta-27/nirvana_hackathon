@@ -2,6 +2,108 @@ import Patient from '../Models/patientSchema.js';
 import Visit from '../Models/visitSchema.js';
 import RiskAssessment from '../Models/riskAssessmentSchema.js';
 import DoctorNotes from '../Models/doctorNotesSchema.js';
+import User from '../Models/userSchema.js';
+
+export const getDoctorProfile = async (req, res) => {
+    try {
+        if (req.user.role !== 'doctor') {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. Doctor role required.'
+            });
+        }
+
+        const doctor = await User.findById(req.user.userId).select('-__v');
+
+        if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                error: 'Doctor profile not found'
+            });
+        }
+
+        const stats = await getDoctorStats(doctor._id);
+
+        res.json({
+            success: true,
+            doctor: {
+                ...doctor.toObject(),
+                stats
+            }
+        });
+    } catch (error) {
+        console.error('Get Doctor Profile Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get doctor profile',
+            details: error.message
+        });
+    }
+};
+
+export const updateDoctorProfile = async (req, res) => {
+    try {
+        if (req.user.role !== 'doctor') {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. Doctor role required.'
+            });
+        }
+
+        const { name, email, phoneNumber, language } = req.body;
+
+        const doctor = await User.findById(req.user.userId);
+
+        if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                error: 'Doctor not found'
+            });
+        }
+
+        if (email && email !== doctor.email) {
+            const existingUser = await User.findOne({ email, _id: { $ne: doctor._id } });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Email already in use by another user'
+                });
+            }
+            doctor.email = email;
+        }
+
+        if (phoneNumber && phoneNumber !== doctor.phoneNumber) {
+            const existingUser = await User.findOne({ phoneNumber, _id: { $ne: doctor._id } });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Phone number already in use by another user'
+                });
+            }
+            doctor.phoneNumber = phoneNumber;
+        }
+
+        if (name) doctor.name = name;
+        if (language && ['en', 'hi', 'mr'].includes(language)) {
+            doctor.language = language;
+        }
+
+        await doctor.save();
+
+        res.json({
+            success: true,
+            message: 'Doctor profile updated successfully',
+            doctor
+        });
+    } catch (error) {
+        console.error('Update Doctor Profile Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update doctor profile',
+            details: error.message
+        });
+    }
+};
 
 export const getPatientsByRisk = async (req, res) => {
     try {
@@ -300,7 +402,6 @@ export const getDashboardStats = async (req, res) => {
 
 export const getDiseaseStats = async (req, res) => {
     try {
-        // Get chronic conditions statistics from patients
         const chronicConditionsStats = await Patient.aggregate([
             { $match: { isActive: true, chronicConditions: { $exists: true, $ne: [] } } },
             { $unwind: '$chronicConditions' },
@@ -313,7 +414,6 @@ export const getDiseaseStats = async (req, res) => {
             { $sort: { count: -1 } }
         ]);
 
-        // Get symptoms statistics from recent visits
         const symptomStats = await Visit.aggregate([
             {
                 $facet: {
@@ -351,14 +451,12 @@ export const getDiseaseStats = async (req, res) => {
             }
         ]);
 
-        // Combine all symptoms
         const allSymptoms = [
             ...(symptomStats[0]?.pregnantSymptoms || []),
             ...(symptomStats[0]?.childSymptoms || []),
             ...(symptomStats[0]?.adultSymptoms || [])
         ];
 
-        // Merge duplicate symptoms
         const symptomsMap = {};
         allSymptoms.forEach(symptom => {
             if (symptomsMap[symptom._id]) {
@@ -372,7 +470,6 @@ export const getDiseaseStats = async (req, res) => {
             .map(([symptom, count]) => ({ _id: symptom, count }))
             .sort((a, b) => b.count - a.count);
 
-        // Format data for Chart.js
         const chartData = {
             chronicConditions: {
                 labels: chronicConditionsStats.map(item => item._id || 'Unknown'),
@@ -433,3 +530,23 @@ export const getDiseaseStats = async (req, res) => {
         });
     }
 };
+
+async function getDoctorStats(doctorId) {
+    const totalNotes = await DoctorNotes.countDocuments({
+        doctorId
+    });
+
+    const patientsReviewed = await DoctorNotes.distinct('patientId', {
+        doctorId
+    });
+
+    const pendingReviews = await RiskAssessment.countDocuments({
+        requiresDoctorReview: true
+    });
+
+    return {
+        totalNotes,
+        patientsReviewed: patientsReviewed.length,
+        pendingReviews
+    };
+}

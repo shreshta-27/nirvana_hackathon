@@ -1,5 +1,7 @@
 import express from 'express';
 import {
+    getDoctorProfile,
+    updateDoctorProfile,
     getPatientsByRisk,
     getPatientDetailForDoctor,
     addDoctorNotes,
@@ -12,6 +14,8 @@ import { cacheMiddleware } from '../Middlewares/cacheMiddleware.js';
 
 const router = express.Router();
 
+router.get('/profile', authenticate, authorize('doctor'), getDoctorProfile);
+router.put('/profile', authenticate, authorize('doctor'), updateDoctorProfile);
 router.get('/patients', authenticate, authorize('doctor'), cacheMiddleware(180), getPatientsByRisk);
 router.get('/patients/:id', authenticate, authorize('doctor'), cacheMiddleware(120), getPatientDetailForDoctor);
 router.post('/notes', authenticate, authorize('doctor'), addDoctorNotes);

@@ -38,7 +38,7 @@ const otpSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: ['phone', 'email'],
-        required: true
+        default: 'phone'
     }
 }, {
     timestamps: true

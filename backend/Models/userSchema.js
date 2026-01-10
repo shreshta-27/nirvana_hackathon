@@ -3,10 +3,16 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema({
     phoneNumber: {
         type: String,
-        required: true,
-        unique: true,
         trim: true,
-        index: true
+        index: true,
+        sparse: true
+    },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        index: true,
+        sparse: true
     },
     role: {
         type: String,

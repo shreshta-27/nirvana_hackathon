@@ -3,9 +3,16 @@ import mongoose from 'mongoose';
 const otpSchema = new mongoose.Schema({
     phoneNumber: {
         type: String,
-        required: true,
         trim: true,
-        index: true
+        index: true,
+        sparse: true
+    },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        index: true,
+        sparse: true
     },
     otp: {
         type: String,
@@ -27,6 +34,11 @@ const otpSchema = new mongoose.Schema({
     maxAttempts: {
         type: Number,
         default: 3
+    },
+    type: {
+        type: String,
+        enum: ['phone', 'email'],
+        required: true
     }
 }, {
     timestamps: true
@@ -34,6 +46,7 @@ const otpSchema = new mongoose.Schema({
 
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 otpSchema.index({ phoneNumber: 1, verified: 1, expiresAt: 1 });
+otpSchema.index({ email: 1, verified: 1, expiresAt: 1 });
 
 const OTP = mongoose.model('OTP', otpSchema);
 

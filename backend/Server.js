@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 
 import authRoutes from './Routers/authRoutes.js';
+import emailOtpRoutes from './Routers/emailOtpRoutes.js';
 import patientRoutes from './Routers/patientRoutes.js';
 import visitRoutes from './Routers/visitRoutes.js';
 import doctorRoutes from './Routers/doctorRoutes.js';
@@ -77,6 +78,7 @@ app.get('/', (req, res) => {
         mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
         endpoints: {
             auth: '/api/auth',
+            emailOtp: '/api/email-otp',
             patients: '/api/patients',
             visits: '/api/visits',
             doctor: '/api/doctor',
@@ -98,6 +100,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/email-otp', authLimiter, emailOtpRoutes);
 app.use('/api/patients', generalLimiter, patientRoutes);
 app.use('/api/visits', aiLimiter, visitRoutes);
 app.use('/api/doctor', generalLimiter, doctorRoutes);
